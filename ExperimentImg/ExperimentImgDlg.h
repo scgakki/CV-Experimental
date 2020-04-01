@@ -34,11 +34,14 @@ public:
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
 	CImage* getImage() { return m_pImgSrc; }
+	void VideoView();
+	void VideoView_WIN();
 	void MedianFilter();
 	void AddNoise();
 	void AddNoise_WIN();
 	void ThreadDraw(DrawPara *p);
 	static UINT Update(void* p);
+	static UINT UpdateCpy(void* p);
 	void ImageCopy(CImage* pImgSrc, CImage* pImgDrt);
 	void MedianFilter_WIN();
 	void MedianFilter_CL(int *pixel, int *pixelIndex, int width, int height);
@@ -47,7 +50,7 @@ public:
 	char * LoadProgSource(const char* cFilename, const char* cPreamble, size_t* szFinalLength);
 	afx_msg LRESULT OnMedianFilterThreadMsgReceived(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnNoiseThreadMsgReceived(WPARAM wParam, LPARAM lParam); 
-
+	afx_msg LRESULT OnVideoViewThreadMsgReceived(WPARAM wParam, LPARAM lParam);
 // 实现
 protected:
 	HICON m_hIcon;
@@ -71,4 +74,6 @@ public:
 	afx_msg void OnNMCustomdrawSliderThreadnum(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedButtonProcess();
 	CButton m_CheckCirculation;
+	CStatic mPictureControl1;
+	afx_msg void OnStnClickedPicture1();
 };

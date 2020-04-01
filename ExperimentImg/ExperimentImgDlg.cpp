@@ -64,7 +64,7 @@ CExperimentImgDlg::CExperimentImgDlg(CWnd* pParent /*=NULL*/)
 
 	//加载对话框的时候初始化
 	m_pImgSrc = NULL;
-//	m_pImgCpy = NULL;
+	m_pImgCpy = NULL;
 	m_nThreadNum = 1;
 	m_pThreadParam = new ThreadParam[MAX_THREAD];
 	srand(time(0));
@@ -76,6 +76,7 @@ void CExperimentImgDlg::DoDataExchange(CDataExchange* pDX)
 	//	DDX_Control(pDX, IDC_EDIT_INFO, mEditInfo);
 	DDX_Control(pDX, IDC_PICTURE, mPictureControl);
 	DDX_Control(pDX, IDC_CHECK_100, m_CheckCirculation);
+	DDX_Control(pDX, IDC_PICTURE1, mPictureControl1);
 }
 
 BEGIN_MESSAGE_MAP(CExperimentImgDlg, CDialogEx)
@@ -90,6 +91,8 @@ ON_NOTIFY(NM_CUSTOMDRAW, IDC_SLIDER_THREADNUM, &CExperimentImgDlg::OnNMCustomdra
 ON_BN_CLICKED(IDC_BUTTON_PROCESS, &CExperimentImgDlg::OnBnClickedButtonProcess)
 ON_MESSAGE(WM_NOISE, &CExperimentImgDlg::OnNoiseThreadMsgReceived)
 ON_MESSAGE(WM_MEDIAN_FILTER, &CExperimentImgDlg::OnMedianFilterThreadMsgReceived)
+ON_STN_CLICKED(IDC_PICTURE1, &CExperimentImgDlg::OnStnClickedPicture1)
+ON_MESSAGE(WM_VIDEO, &CExperimentImgDlg::OnVideoViewThreadMsgReceived)
 END_MESSAGE_MAP()
 
 
@@ -128,6 +131,7 @@ BOOL CExperimentImgDlg::OnInitDialog()
 //	mEditInfo.SetWindowTextW(CString("File Path"));
 	CComboBox * cmb_function = ((CComboBox*)GetDlgItem(IDC_COMBO_FUNCTION));
 	cmb_function->AddString(_T("椒盐噪声"));
+	cmb_function->AddString(_T("视频检测"));
 	cmb_function->AddString(_T("中值滤波"));
 	cmb_function->SetCurSel(0);
 
@@ -142,7 +146,8 @@ BOOL CExperimentImgDlg::OnInitDialog()
 	slider->SetRange(1, MAX_THREAD, TRUE);
 	slider->SetPos(MAX_THREAD);
 
-	AfxBeginThread((AFX_THREADPROC)&CExperimentImgDlg::Update, this);
+	ShowWindow(SW_MAXIMIZE);
+	//AfxBeginThread((AFX_THREADPROC)&CExperimentImgDlg::Update, this);
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -246,7 +251,7 @@ UINT CExperimentImgDlg::Update(void* p)
 			CDC *pDC = dlg->mPictureControl.GetDC();
 			SetStretchBltMode(pDC->m_hDC, STRETCH_HALFTONE);
 
-			if (width <= rect.Width() && height <= rect.Width())
+			if (width <= rect.Width() && height <= rect.Height())
 			{
 				rect1 = CRect(rect.TopLeft(), CSize(width, height));
 				dlg->m_pImgSrc->StretchBlt(pDC->m_hDC, rect1, SRCCOPY);
@@ -258,6 +263,45 @@ UINT CExperimentImgDlg::Update(void* p)
 				float ScaleIndex = (xScale <= yScale ? xScale : yScale);
 				rect1 = CRect(rect.TopLeft(), CSize((int)width*ScaleIndex, (int)height*ScaleIndex));
 				dlg->m_pImgSrc->StretchBlt(pDC->m_hDC, rect1, SRCCOPY);
+			}
+			dlg->ReleaseDC(pDC);
+		}
+	}
+	return 0;
+}
+
+UINT CExperimentImgDlg::UpdateCpy(void* p)
+{
+	while (1)
+	{
+		Sleep(200);
+		CExperimentImgDlg* dlg = (CExperimentImgDlg*)p;
+
+		if (dlg->m_pImgCpy != NULL)
+		{
+			int height;
+			int width;
+			CRect rect;
+			CRect rect1;
+			height = dlg->m_pImgCpy->GetHeight();
+			width = dlg->m_pImgCpy->GetWidth();
+
+			dlg->mPictureControl1.GetWindowRect(&rect);
+			CDC *pDC = dlg->mPictureControl1.GetDC();
+			SetStretchBltMode(pDC->m_hDC, STRETCH_HALFTONE);
+
+			if (width <= rect.Width() && height <= rect.Height())
+			{
+				rect1 = CRect(rect.TopLeft(), CSize(width, height));
+				dlg->m_pImgCpy->StretchBlt(pDC->m_hDC, rect1, SRCCOPY);
+			}
+			else
+			{
+				float xScale = (float)rect.Width() / (float)width;
+				float yScale = (float)rect.Height() / (float)height;
+				float ScaleIndex = (xScale <= yScale ? xScale : yScale);
+				rect1 = CRect(rect.TopLeft(), CSize((int)width*ScaleIndex * 2, (int)height*ScaleIndex*2.5));
+				dlg->m_pImgCpy->StretchBlt(pDC->m_hDC, rect1, SRCCOPY);
 			}
 			dlg->ReleaseDC(pDC);
 		}
@@ -334,6 +378,41 @@ void CExperimentImgDlg::OnBnClickedButtonOpen()
 		}
 		m_pImgSrc = new CImage();
 		m_pImgSrc->Load(strFilePath);
+
+		//源图像参数
+		BYTE* srcPtr = (BYTE*)m_pImgSrc->GetBits();
+		int srcBitsCount = m_pImgSrc->GetBPP();
+		int srcWidth = m_pImgSrc->GetWidth();
+		int srcHeight = m_pImgSrc->GetHeight();
+		int srcPitch = m_pImgSrc->GetPitch();
+
+		//销毁原有图像
+		if (m_pImgCpy != NULL) {
+			m_pImgCpy->Destroy();
+			delete m_pImgCpy;
+		}
+		m_pImgCpy = new CImage();
+		//创建CImage类新图像并分配内存
+		if (srcBitsCount == 32)   //支持alpha通道
+		{
+			m_pImgCpy->Create(srcWidth, srcHeight, srcBitsCount, 1);
+		}
+		else
+		{
+			m_pImgCpy->Create(srcWidth, srcHeight, srcBitsCount, 0);
+		}
+		//加载调色板
+		if (srcBitsCount <= 8 && m_pImgSrc->IsIndexed())//需要调色板
+		{
+			RGBQUAD pal[256];
+			int nColors = m_pImgSrc->GetMaxColorTableEntries();
+			if (nColors > 0)
+			{
+				m_pImgSrc->GetColorTable(0, nColors, pal);
+				m_pImgCpy->SetColorTable(0, nColors, pal);//复制调色板程序
+			}
+		}
+
 		this->Invalidate();
 	}
 
@@ -367,7 +446,10 @@ void CExperimentImgDlg::OnBnClickedButtonProcess()
 	case 0:  //椒盐噪声
 		AddNoise();
 		break;
-	case 1: //自适应中值滤波
+	case 1:	//视频检测
+		VideoView();
+		break;
+	case 2: //自适应中值滤波
 		MedianFilter();
 		break;
 	default:
@@ -439,6 +521,73 @@ void CExperimentImgDlg::AddNoise_WIN()
 			(i + 1) * subLength - 1 : m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() - 1;
 		m_pThreadParam[i].src = m_pImgSrc;
 		AfxBeginThread((AFX_THREADPROC)&ImageProcess::addNoise, &m_pThreadParam[i]);
+	}
+}
+
+void CExperimentImgDlg::VideoView()
+{
+	CComboBox* cmb_thread = ((CComboBox*)GetDlgItem(IDC_COMBO_THREAD));
+	int thread = cmb_thread->GetCurSel();
+	CButton* clb_circulation = ((CButton*)GetDlgItem(IDC_CHECK_CIRCULATION));
+	int circulation = clb_circulation->GetCheck() == 0 ? 1 : 100;
+	startTime = CTime::GetTickCount();
+	switch (thread)
+	{
+	case 0://win多线程
+	{
+		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
+		VideoView_WIN();
+		//for (int i = 0; i < circulation; i++)
+		//{
+		//	for (int i = 0; i < m_nThreadNum; ++i)
+		//	{
+		//		m_pThreadParam[i].startIndex = i * subLength;
+		//		m_pThreadParam[i].endIndex = i != m_nThreadNum - 1 ?
+		//			(i + 1) * subLength - 1 : m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() - 1;
+		//		m_pThreadParam[i].src = m_pImgSrc;
+		//		AfxBeginThread((AFX_THREADPROC)&ImageProcess::addNoise, &m_pThreadParam[i]);
+		//	}
+		//}
+		//CTime endTime = CTime::GetTickCount();
+		//CString timeStr;
+		//timeStr.Format(_T("处理%d次,耗时:%dms"), circulation, endTime - startTime);
+		//AfxMessageBox(timeStr);
+	}
+
+	break;
+
+	case 1://openmp
+	{
+		int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
+
+#pragma omp parallel for num_threads(m_nThreadNum)
+		for (int i = 0; i < m_nThreadNum; ++i)
+		{
+			m_pThreadParam[i].startIndex = i * subLength;
+			m_pThreadParam[i].endIndex = i != m_nThreadNum - 1 ?
+				(i + 1) * subLength - 1 : m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() - 1;
+			m_pThreadParam[i].src = m_pImgSrc;
+			ImageProcess::videoView(&m_pThreadParam[i]);
+		}
+	}
+
+	break;
+
+	case 2://cuda
+		break;
+	}
+}
+
+void CExperimentImgDlg::VideoView_WIN()
+{
+	int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
+	for (int i = 0; i < m_nThreadNum; ++i)
+	{
+		m_pThreadParam[i].startIndex = i * subLength;
+		m_pThreadParam[i].endIndex = i != m_nThreadNum - 1 ?
+			(i + 1) * subLength - 1 : m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() - 1;
+		m_pThreadParam[i].src = m_pImgSrc;
+		AfxBeginThread((AFX_THREADPROC)&ImageProcess::videoView, &m_pThreadParam[i]);
 	}
 }
 
@@ -906,6 +1055,36 @@ LRESULT CExperimentImgDlg::OnNoiseThreadMsgReceived(WPARAM wParam, LPARAM lParam
 	return 0;
 }
 
+LRESULT CExperimentImgDlg::OnVideoViewThreadMsgReceived(WPARAM wParam, LPARAM lParam)
+{
+	static int tempCount = 0;
+	static int tempProcessCount = 0;
+	CButton* clb_circulation = ((CButton*)GetDlgItem(IDC_CHECK_CIRCULATION));
+	int circulation = clb_circulation->GetCheck() == 0 ? 1 : 100;
+	if ((int)wParam == 1)
+		tempCount++;
+	if (m_nThreadNum == tempCount)
+	{
+		//CTime endTime = CTime::GetTickCount();
+		//CString timeStr;
+		//timeStr.Format(_T("耗时:%dms", endTime - startTime));
+		tempCount = 0;
+		tempProcessCount++;
+		if (tempProcessCount < circulation)
+			VideoView_WIN();
+		else
+		{
+			tempProcessCount = 0;
+			CTime endTime = CTime::GetTickCount();
+			CString timeStr;
+			timeStr.Format(_T("处理%d次,耗时:%dms"), circulation, endTime - startTime);
+			AfxMessageBox(timeStr);
+		}
+		//	AfxMessageBox(timeStr);
+	}
+	return 0;
+}
+
 char* CExperimentImgDlg::LoadProgSource(const char* cFilename, const char* cPreamble, size_t* szFinalLength)
 {
 	FILE* pFileStream = NULL;
@@ -966,4 +1145,9 @@ size_t CExperimentImgDlg::RoundUp(int groupSize, int globalSize)
 	{
 		return globalSize + groupSize - r;
 	}
+}
+
+void CExperimentImgDlg::OnStnClickedPicture1()
+{
+	// TODO: 在此添加控件通知处理程序代码
 }

@@ -176,3 +176,46 @@ UINT ImageProcess::addNoise(LPVOID  p)
 	::PostMessage(AfxGetMainWnd()->GetSafeHwnd(), WM_NOISE, 1, NULL);
 	return 0;
 }
+
+UINT ImageProcess::videoView(LPVOID  p)
+{
+	ThreadParam* param = (ThreadParam*)p;
+	int maxWidth = param->src->GetWidth();
+	int maxHeight = param->src->GetHeight();
+
+	int startIndex = param->startIndex;
+	int endIndex = param->endIndex;
+	byte* pRealData = (byte*)param->src->GetBits();
+	int bitCount = param->src->GetBPP() / 8;
+	int pit = param->src->GetPitch();
+
+	for (int i = startIndex; i <= endIndex; ++i)
+	{
+		int x = i % maxWidth;
+		int y = i / maxWidth;
+		if ((rand() % 1000) * 0.001 < NOISE)
+		{
+			int value = 0;
+			if (rand() % 1000 < 500)
+			{
+				value = 0;
+			}
+			else
+			{
+				value = 255;
+			}
+			if (bitCount == 1)
+			{
+				*(pRealData + pit * y + x * bitCount) = value;
+			}
+			else
+			{
+				*(pRealData + pit * y + x * bitCount) = value;
+				*(pRealData + pit * y + x * bitCount + 1) = value;
+				*(pRealData + pit * y + x * bitCount + 2) = value;
+			}
+		}
+	}
+	::PostMessage(AfxGetMainWnd()->GetSafeHwnd(), WM_VIDEO, 1, NULL);
+	return 0;
+}
