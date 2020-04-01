@@ -118,7 +118,8 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;cudart.lib;opencv_aruco420d.lib;opencv_bgsegm420d.lib;opencv_bioinspired420d.lib;opencv_calib3d420d.lib;opencv_ccalib420d.lib;opencv_core420d.lib;opencv_cudaarithm420d.lib;opencv_cudabgsegm420d.lib;opencv_cudacodec420d.lib;opencv_cudafeatures2d420d.lib;opencv_cudafilters420d.lib;opencv_cudaimgproc420d.lib;opencv_cudalegacy420d.lib;opencv_cudaoptflow420d.lib;opencv_cudastereo420d.lib;opencv_cudawarping420d.lib;opencv_cudev420d.lib;opencv_datasets420d.lib;opencv_dnn_objdetect420d.lib;opencv_dnn_superres420d.lib;opencv_dnn420d.lib;opencv_dpm420d.lib;opencv_face420d.lib;opencv_features2d420d.lib;opencv_flann420d.lib;opencv_fuzzy420d.lib;opencv_gapi420d.lib;opencv_hfs420d.lib;opencv_highgui420d.lib;opencv_img_hash420d.lib;opencv_imgcodecs420d.lib;opencv_imgproc420d.lib;opencv_line_descriptor420d.lib;opencv_ml420d.lib;opencv_objdetect420d.lib;opencv_optflow420d.lib;opencv_phase_unwrapping420d.lib;opencv_photo420d.lib;opencv_plot420d.lib;opencv_quality420d.lib;opencv_reg420d.lib;opencv_rgbd420d.lib;opencv_saliency420d.lib;opencv_shape420d.lib;opencv_stereo420d.lib;opencv_structured_light420d.lib;opencv_superres420d.lib;opencv_surface_matching420d.lib;opencv_text420d.lib;opencv_tracking420d.lib;opencv_video420d.lib;opencv_videoio420d.lib;opencv_videostab420d.lib;opencv_xfeatures2d420d.lib;opencv_ximgproc420d.lib;opencv_xobjdetect420d.lib;opencv_xphoto420d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>E:\cuda\v10.0\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -130,6 +131,9 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <CudaCompile>
+      <Include>E:\cuda\sample\common\inc;%(Include)</Include>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -171,8 +175,8 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenCL.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>E:\cuda\v10.0\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenCL.lib;cudart.lib;opencv_aruco420d.lib;opencv_bgsegm420d.lib;opencv_bioinspired420d.lib;opencv_calib3d420d.lib;opencv_ccalib420d.lib;opencv_core420d.lib;opencv_cudaarithm420d.lib;opencv_cudabgsegm420d.lib;opencv_cudacodec420d.lib;opencv_cudafeatures2d420d.lib;opencv_cudafilters420d.lib;opencv_cudaimgproc420d.lib;opencv_cudalegacy420d.lib;opencv_cudaoptflow420d.lib;opencv_cudastereo420d.lib;opencv_cudawarping420d.lib;opencv_cudev420d.lib;opencv_datasets420d.lib;opencv_dnn_objdetect420d.lib;opencv_dnn_superres420d.lib;opencv_dnn420d.lib;opencv_dpm420d.lib;opencv_face420d.lib;opencv_features2d420d.lib;opencv_flann420d.lib;opencv_fuzzy420d.lib;opencv_gapi420d.lib;opencv_hfs420d.lib;opencv_highgui420d.lib;opencv_img_hash420d.lib;opencv_imgcodecs420d.lib;opencv_imgproc420d.lib;opencv_line_descriptor420d.lib;opencv_ml420d.lib;opencv_objdetect420d.lib;opencv_optflow420d.lib;opencv_phase_unwrapping420d.lib;opencv_photo420d.lib;opencv_plot420d.lib;opencv_quality420d.lib;opencv_reg420d.lib;opencv_rgbd420d.lib;opencv_saliency420d.lib;opencv_shape420d.lib;opencv_stereo420d.lib;opencv_structured_light420d.lib;opencv_superres420d.lib;opencv_surface_matching420d.lib;opencv_text420d.lib;opencv_tracking420d.lib;opencv_video420d.lib;opencv_videoio420d.lib;opencv_videostab420d.lib;opencv_xfeatures2d420d.lib;opencv_ximgproc420d.lib;opencv_xobjdetect420d.lib;opencv_xphoto420d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -185,7 +189,7 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <CudaCompile>
-      <Include>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v8.0\common\inc;%(Include)</Include>
+      <Include>E:\cuda\sample\common\inc;%(Include)</Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -224,10 +228,11 @@
   <ItemGroup>
     <CudaCompile Include="medianFilter.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </CudaCompile>
     <CudaCompile Include="test_kernel.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">64</TargetMachinePlatform>
     </CudaCompile>
   </ItemGroup>

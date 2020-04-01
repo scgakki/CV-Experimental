@@ -45,9 +45,9 @@
 #define WM_NOISE WM_USER+2
 #endif
 
-
-
-
+#ifndef WM_VIDEO
+#define WM_VIDEO WM_USER+3
+#endif
 
 #ifdef _UNICODE
 #if defined _M_IX86
