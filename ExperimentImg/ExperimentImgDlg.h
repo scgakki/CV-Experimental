@@ -58,6 +58,18 @@ public:
 	afx_msg LRESULT OnMedianFilterThreadMsgReceived(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnNoiseThreadMsgReceived(WPARAM wParam, LPARAM lParam); 
 	afx_msg LRESULT OnVideoViewThreadMsgReceived(WPARAM wParam, LPARAM lParam);
+	void RandomFern();
+	void GeometricCorrect();
+	void ObjectDetect();
+	void ImageStitch();
+	void SIFT1();
+	void SURF1();
+	void SIFT2();
+	void SURF2();
+	void SIFT3();
+	void SURF3();
+	void SIFT4();
+	void SURF4();
 // ÊµÏÖ
 protected:
 	HICON m_hIcon;
@@ -65,7 +77,10 @@ protected:
 	HWND hWndDisplay1;
 	cv::VideoCapture capture;
 	CImage * m_pImgSrc;
-	CImage * m_pImgCpy;
+	CImage * m_pImgSrc2;
+	//CImage * m_pImgCpy;
+	CString image_path; // ´æ´¢Í¼Æ¬Â·¾¶
+	CString image_path2;
 	int m_nThreadNum;
 	ThreadParam* m_pThreadParam;
 	CTime startTime;
@@ -139,4 +154,9 @@ public:
 	cv::Mat img1;
 	cv::Mat img2;
 	std::string picpath;
+	afx_msg void OnBnClickedButtonOpens();
+	void OnBnClickedButtonBrute();
+	void OnBnClickedButtonFlann();
+	void OnBnClickedButtonSiftFlann();
+	afx_msg void OnCbnSelchangeComboSift();
 };
