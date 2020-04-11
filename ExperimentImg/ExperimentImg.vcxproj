@@ -200,8 +200,11 @@
   <ItemGroup>
     <ClInclude Include="ExperimentImg.h" />
     <ClInclude Include="ExperimentImgDlg.h" />
+    <ClInclude Include="framework.h" />
     <ClInclude Include="ImageProcess.h" />
     <ClInclude Include="ldb.h" />
+    <ClInclude Include="MatCImage.h" />
+    <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -211,6 +214,8 @@
     <ClCompile Include="ExperimentImgDlg.cpp" />
     <ClCompile Include="ImageProcess.cpp" />
     <ClCompile Include="ldb.cpp" />
+    <ClCompile Include="MatCImage.cpp" />
+    <ClCompile Include="pch.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -17,6 +17,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "MatCImage.h"
+
 #include <opencv2/highgui/highgui_c.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -26,6 +28,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/legacy/legacy.hpp>
 
@@ -35,6 +38,7 @@
 
 //extern "C" void add_host(int *host_a, int *host_b, int *host_c); //interface for kernel function
 extern "C" void MedianFilter_host(int *pixel, int Width, int Height);
+CPoint align_LeftTopPoint(float owidth, float oheight, float width, float height);
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -126,6 +130,7 @@ ON_NOTIFY(NM_THEMECHANGED, IDC_HORI_SCROLLBAR, &CExperimentImgDlg::OnNMThemeChan
 ON_WM_HSCROLL()
 ON_BN_CLICKED(IDC_BUTTON_OPENS, &CExperimentImgDlg::OnBnClickedButtonOpens)
 ON_CBN_SELCHANGE(IDC_COMBO_SIFT, &CExperimentImgDlg::OnCbnSelchangeComboSift)
+ON_CBN_SELCHANGE(IDC_COMBO_THREAD, &CExperimentImgDlg::OnCbnSelchangeComboThread)
 END_MESSAGE_MAP()
 
 
@@ -559,11 +564,6 @@ void CExperimentImgDlg::OnBnClickedButtonOpens()
 	}
 }
 
-void CExperimentImgDlg::OnCbnSelchangeComboFunction()
-{
-	// TODO: 在此添加控件通知处理程序代码
-}
-
 void CExperimentImgDlg::OnNMCustomdrawSliderThreadnum(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMCUSTOMDRAW pNMCD = reinterpret_cast<LPNMCUSTOMDRAW>(pNMHDR);
@@ -843,7 +843,7 @@ void CExperimentImgDlg::GeometricCorrect() {
 	case 0://win多线程
 	{
 		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
-		SIFT2();
+		SIFT1();
 		//for (int i = 0; i < circulation; i++)
 		//{
 		//	for (int i = 0; i < m_nThreadNum; ++i)
@@ -865,7 +865,7 @@ void CExperimentImgDlg::GeometricCorrect() {
 
 	case 1://openmp
 	{
-		SURF2();
+		SURF1();
 	}
 	break;
 	}
@@ -882,7 +882,7 @@ void CExperimentImgDlg::SIFT1() {
 	case 0://win多线程
 	{
 		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
-
+		OnBnClickedButtonContours();
 		//for (int i = 0; i < circulation; i++)
 		//{
 		//	for (int i = 0; i < m_nThreadNum; ++i)
@@ -904,10 +904,11 @@ void CExperimentImgDlg::SIFT1() {
 
 	case 1://openmp
 	{
-		OnBnClickedButtonSiftFlann();
+		OnBnClickedButtonEstimate1();
 	}
 	break;
 	case 2:
+		OnBnClickedButtonEstimate2();
 		break;
 	case 3:
 		break;
@@ -2597,8 +2598,252 @@ void  CExperimentImgDlg::KuaiTui(CScrollBar &gdt)
 	}
 }
 
+void CExperimentImgDlg::OnCbnSelchangeComboFunction()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	//CComboBox* cmb_function = ((CComboBox*)GetDlgItem(IDC_COMBO_FUNCTION));
+	//int func = cmb_function->GetCurSel();
+	//switch (func)
+	//{
+	//case 0:  //几何矫正
+	//	CComboBox * cmb_thread = ((CComboBox*)GetDlgItem(IDC_COMBO_THREAD));
+	//	cmb_thread->InsertString(0, _T("单图矩形矫正"));
+	//	cmb_thread->InsertString(1, _T("仿射"));
+	//	cmb_thread->InsertString(2, _T("透视"));
+	//	cmb_thread->SetCurSel(0);
+	//	break;
+	//case 1:	//目标检测
+	//	CComboBox * cmb_thread = ((CComboBox*)GetDlgItem(IDC_COMBO_THREAD));
+	//	cmb_thread->InsertString(0, _T("BruteForce"));
+	//	cmb_thread->InsertString(1, _T("FLANN"));
+	//	cmb_thread->InsertString(2, _T("RANSAC"));
+	//	cmb_thread->InsertString(3, _T("HoughCluster"));
+	//	cmb_thread->SetCurSel(0);
+	//	break;
+	//case 2: // 随机蕨分类器
+	//	break;
+	//case 3: //图像拼接
+	//	CComboBox * cmb_thread = ((CComboBox*)GetDlgItem(IDC_COMBO_THREAD));
+	//	cmb_thread->InsertString(0, _T("BruteForce"));
+	//	cmb_thread->InsertString(1, _T("FLANN"));
+	//	cmb_thread->InsertString(2, _T("RANSAC"));
+	//	cmb_thread->InsertString(3, _T("HoughCluster"));
+	//	cmb_thread->SetCurSel(0);
+	//default:
+	//	break;
+	//}
+}
 
 void CExperimentImgDlg::OnCbnSelchangeComboSift()
 {
 	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CExperimentImgDlg::OnCbnSelchangeComboThread()
+{
+	// TODO: 在此添加控件通知处理程序代码
+
+}
+
+CPoint align_LeftTopPoint(float owidth, float oheight, float width, float height) {
+	int x = (int)(owidth - width) / 2;
+	int y = (int)(oheight - height) / 2;
+	return CPoint(x, y);
+}
+
+void CExperimentImgDlg::OnBnClickedButtonContours()
+{
+	if (m_pImgSrc != NULL) {
+		GetContoursPic(*m_pImgSrc);
+	}
+	if (m_pImgSrc2 != NULL) {
+		GetContoursPic(*m_pImgSrc2);
+	}
+}
+
+void CExperimentImgDlg::GetContoursPic(CImage& mpic)
+{
+	int nChannels = mpic.GetBPP() / 8;
+	if ((1 != nChannels) && (3 != nChannels))
+	{
+		AfxMessageBox((CString)"暂时仅支持单通道或三通道图片");
+		return;
+	}
+	Mat srcImg;
+	matConvertor.CImageToMat(mpic, srcImg);
+	Mat gray, binImg;
+	if (nChannels == 3)
+	{
+		//灰度化
+		cvtColor(srcImg, gray, COLOR_RGB2GRAY);
+		//二值化
+		threshold(gray, binImg, 100, 200, CV_THRESH_BINARY);
+	}
+	else {
+		threshold(srcImg, binImg, 100, 200, CV_THRESH_BINARY);
+	}
+	vector<vector<Point> > contours;
+	vector<Rect> boundRect(contours.size());
+	//第5个参数为CV_RETR_EXTERNAL，只检索外框  
+	findContours(binImg, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE); //找轮廓
+	cout << contours.size() << endl;
+	for (int i = 0; i < contours.size(); i++)
+	{
+		//需要获取的坐标  
+		Point2f rectpoint[4];
+		RotatedRect rect = minAreaRect(Mat(contours[i]));
+
+		rect.points(rectpoint);//获取4个顶点坐标  
+
+		//与水平线的角度  
+		float angle = rect.angle;
+		cout << angle << endl;
+
+		int line1 = sqrt((rectpoint[1].y - rectpoint[0].y)*(rectpoint[1].y - rectpoint[0].y) + (rectpoint[1].x - rectpoint[0].x)*(rectpoint[1].x - rectpoint[0].x));
+		int line2 = sqrt((rectpoint[3].y - rectpoint[0].y)*(rectpoint[3].y - rectpoint[0].y) + (rectpoint[3].x - rectpoint[0].x)*(rectpoint[3].x - rectpoint[0].x));
+		//rectangle(binImg, rectpoint[0], rectpoint[3], Scalar(255), 2);
+		//面积太小的直接pass
+		if (line1 * line2 < 600)
+		{
+			continue;
+		}
+
+		//为了让正方形横着放，所以旋转角度是不一样的。竖放的，给他加90度，翻过来  
+		if (line1 > line2)
+		{
+			angle = 90 + angle;
+		}
+
+		//新建一个感兴趣的区域图，大小跟原图一样大  
+		Mat RoiSrcImg(srcImg.rows, srcImg.cols, CV_8UC3); //注意这里必须选CV_8UC3
+		RoiSrcImg.setTo(0); //颜色都设置为黑色  
+		//对得到的轮廓填充一下  
+		drawContours(binImg, contours, -1, Scalar(255), CV_FILLED);
+
+		//抠图到RoiSrcImg
+		srcImg.copyTo(RoiSrcImg, binImg);
+
+		//创建一个旋转后的图像  
+		Mat RatationedImg(RoiSrcImg.rows, RoiSrcImg.cols, CV_8UC1);
+		RatationedImg.setTo(0);
+		//对RoiSrcImg进行旋转  
+		Point2f center = rect.center;  //中心点  
+		Mat M2 = getRotationMatrix2D(center, angle, 1);//计算旋转加缩放的变换矩阵 
+		warpAffine(RoiSrcImg, RatationedImg, M2, RoiSrcImg.size(), 1, 0, Scalar(0));//仿射变换 
+		imshow("矩形矫正后", RatationedImg);
+		cvWaitKey(0);
+		//imwrite("r.jpg", RatationedImg); //将矫正后的图片保存下来
+	}
+}
+
+void CExperimentImgDlg::geoEstimate(CImage & Src, CImage & Dst, int method = 0)
+{
+	int nChannels1 = Src.GetBPP() / 8;
+	int nChannels2 = Dst.GetBPP() / 8;
+	if (((1 != nChannels1) && (3 != nChannels1)) || ((1 != nChannels2) && (3 != nChannels2)))
+	{
+		AfxMessageBox((CString)"暂时仅支持单通道或三通道图片");
+		return;
+	}
+	Mat img1, img2;
+	matConvertor.CImageToMat(Src, img1);
+	matConvertor.CImageToMat(Dst, img2);
+	if (img1.empty() || img2.empty()) {
+		AfxMessageBox((CString)"图片加载失败");
+		return;
+	}
+	//首先使用SURF算法寻找特征点
+	SurfFeatureDetector surfDetector(2000);
+	vector<KeyPoint> keypoint1, keypoint2;
+	surfDetector.detect(img1, keypoint1);
+	surfDetector.detect(img2, keypoint2);
+	//描述子
+	SurfDescriptorExtractor descriptor;
+	Mat descript1, descript2;
+	BruteForceMatcher<L2<float>> matcher;
+
+	vector<DMatch> matches;//匹配记录
+	//Mat matchImage;//显示匹配关系
+
+	descriptor.compute(img1, keypoint1, descript1);
+	descriptor.compute(img2, keypoint2, descript2);
+
+	matcher.match(descript1, descript2, matches);
+	Mat dst = Mat::zeros(img1.rows, img1.cols, img1.type());//输出结果
+	if (method == 0) {
+		//拿到距离最接近的三组匹配点进行仿射变换
+		vector<Point2f> orignPoints(3);
+		vector<Point2f> targetPoints(3);
+		sort(matches.begin(), matches.end());
+
+		vector<KeyPoint> bestPoints1, bestPoints2;
+		vector<DMatch> matchesVoted;
+		for (int i = 0; i < 3; i++) {
+			orignPoints[i] = keypoint1[matches[i].queryIdx].pt;
+			targetPoints[i] = keypoint2[matches[i].trainIdx].pt;
+			DMatch dmatch;
+			dmatch.queryIdx = i;
+			dmatch.trainIdx = i;
+			matchesVoted.push_back(dmatch);
+			bestPoints1.push_back(keypoint1[matches[i].queryIdx]);
+			bestPoints2.push_back(keypoint2[matches[i].trainIdx]);
+		}
+
+		/*drawMatches(img1, goodImagePoints1, img2, goodImagePoints2, matchesVoted, matchImage);
+		imshow("test", matchImage);*/
+
+		Mat warpMat(2, 3, CV_32FC1);
+
+		warpMat = getAffineTransform(orignPoints, targetPoints);
+		warpAffine(img1, dst, warpMat, dst.size());
+	}
+	else if (method == 1) {
+		//拿到距离最近的四个点进行透视变换
+		vector<Point2f> orignPoints(4);
+		vector<Point2f> targetPoints(4);
+		sort(matches.begin(), matches.end());
+
+		vector<KeyPoint> bestPoints1, bestPoints2;
+		vector<DMatch> matchesVoted;
+		for (int i = 0; i < 4; i++) {
+			orignPoints[i] = keypoint1[matches[i].queryIdx].pt;
+			targetPoints[i] = keypoint2[matches[i].trainIdx].pt;
+			DMatch dmatch;
+			dmatch.queryIdx = i;
+			dmatch.trainIdx = i;
+			matchesVoted.push_back(dmatch);
+			bestPoints1.push_back(keypoint1[matches[i].queryIdx]);
+			bestPoints2.push_back(keypoint2[matches[i].trainIdx]);
+		}
+
+		/*drawMatches(img1, goodImagePoints1, img2, goodImagePoints2, matchesVoted, matchImage);
+		imshow("test", matchImage);*/
+
+		Mat transformMat = getPerspectiveTransform(orignPoints, targetPoints);
+		warpPerspective(img1, dst, transformMat, dst.size());
+	}
+	else {
+		return;
+	}
+
+	imshow("res", dst);
+	cvWaitKey(0);
+}
+
+
+void CExperimentImgDlg::OnBnClickedButtonEstimate1()
+{
+	if (m_pImgSrc == NULL || m_pImgSrc2 == NULL) {
+		AfxMessageBox((CString)"需加载目标图片与基准图片");
+	}
+	geoEstimate(*m_pImgSrc, *m_pImgSrc);
+}
+
+void CExperimentImgDlg::OnBnClickedButtonEstimate2()
+{
+	if (m_pImgSrc == NULL || m_pImgSrc2 == NULL) {
+		AfxMessageBox((CString)"需加载目标图片与基准图片");
+	}
+	geoEstimate(*m_pImgSrc, *m_pImgSrc2, 1);
 }

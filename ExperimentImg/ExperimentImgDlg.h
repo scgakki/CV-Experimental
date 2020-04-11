@@ -6,6 +6,7 @@
 #include "afxwin.h"
 #include "ImageProcess.h"
 #include <opencv2/opencv.hpp>
+#include "MatCImage.h"
 
 #ifndef CIRCLE_H
 #define CIRCLE_H
@@ -79,6 +80,7 @@ protected:
 	//CImage * m_pImgCpy;
 	CString image_path; // ´æ´¢Í¼Æ¬Â·¾¶
 	CString image_path2;
+	MatCImage matConvertor;
 	int m_nThreadNum;
 	ThreadParam* m_pThreadParam;
 	CTime startTime;
@@ -156,5 +158,11 @@ public:
 	void OnBnClickedButtonBrute();
 	void OnBnClickedButtonFlann();
 	void OnBnClickedButtonSiftFlann();
+	void GetContoursPic(CImage& mpic);
+	void geoEstimate(CImage& Src, CImage& Dst, int method);
+	void OnBnClickedButtonContours();
+	void OnBnClickedButtonEstimate1();
+	void OnBnClickedButtonEstimate2();
 	afx_msg void OnCbnSelchangeComboSift();
+	afx_msg void OnCbnSelchangeComboThread();
 };
