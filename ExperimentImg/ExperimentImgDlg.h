@@ -66,8 +66,6 @@ public:
 	void SURF1();
 	void SIFT2();
 	void SURF2();
-	void SIFT3();
-	void SURF3();
 	void SIFT4();
 	void SURF4();
 // й╣ож

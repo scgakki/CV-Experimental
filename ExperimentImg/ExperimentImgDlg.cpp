@@ -14,6 +14,8 @@
 #include <time.h>
 #include "ldb.h"
 #include <atlconv.h>
+#include <vector>
+#include <algorithm>
 
 #include <opencv2/highgui/highgui_c.h>
 #include <opencv2/highgui.hpp>
@@ -24,6 +26,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/legacy/legacy.hpp>
 
 #ifdef _DEBUG
@@ -533,7 +536,7 @@ void CExperimentImgDlg::OnBnClickedButtonOpens()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	// TODO: 在此添加控件通知处理程序代码
-	TCHAR szFilter[] = _T("JPEG(*jpg)|*.jpg|*.bmp|TIFF(*.tif)|*.tif|All Files （*.*）|*.*||");
+	TCHAR szFilter[] = _T("JPEG(*jpg)|*.jpg|*.bmp|*.png|TIFF(*.tif)|*.tif|All Files （*.*）|*.*||");
 	CString filePath("");
 
 	CFileDialog fileOpenDialog(TRUE, NULL, NULL, OFN_HIDEREADONLY, szFilter);
@@ -1048,112 +1051,140 @@ void CExperimentImgDlg::SURF2() {
 }
 
 void CExperimentImgDlg::RandomFern() {
-	CComboBox* cmb_sift = ((CComboBox*)GetDlgItem(IDC_COMBO_SIFT));
-	int thread = cmb_sift->GetCurSel();
-	CButton* clb_circulation = ((CButton*)GetDlgItem(IDC_CHECK_CIRCULATION));
-	int circulation = clb_circulation->GetCheck() == 0 ? 1 : 100;
-	startTime = CTime::GetTickCount();
-	switch (thread)
+	int i;
+	if (image_path == "" || image_path2 == "")
+		return;
+	cv::String object_filename, scene_filename;
+
+	USES_CONVERSION;
+	//path1 = W2A(image_path);
+	//path2 = W2A(image_path2);
+	object_filename = image_path.GetBuffer(0);
+	scene_filename = image_path2.GetBuffer(0);
+	//读入实物单体图像和场景图像
+	Mat object = imread(object_filename, CV_LOAD_IMAGE_GRAYSCALE);
+	Mat scene = imread(scene_filename, CV_LOAD_IMAGE_GRAYSCALE);
+
+	if (!object.data || !scene.data)
 	{
-	case 0://win多线程
-	{
-		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
-		SIFT2();
-		//for (int i = 0; i < circulation; i++)
-		//{
-		//	for (int i = 0; i < m_nThreadNum; ++i)
-		//	{
-		//		m_pThreadParam[i].startIndex = i * subLength;
-		//		m_pThreadParam[i].endIndex = i != m_nThreadNum - 1 ?
-		//			(i + 1) * subLength - 1 : m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() - 1;
-		//		m_pThreadParam[i].src = m_pImgSrc;
-		//		AfxBeginThread((AFX_THREADPROC)&ImageProcess::addNoise, &m_pThreadParam[i]);
-		//	}
-		//}
-		//CTime endTime = CTime::GetTickCount();
-		//CString timeStr;
-		//timeStr.Format(_T("处理%d次,耗时:%dms"), circulation, endTime - startTime);
-		//AfxMessageBox(timeStr);
+		/*fprintf(stderr, "Can not load %s and/or %s\n",
+			object_filename, scene_filename);*/
+		exit(-1);
 	}
 
-	break;
+	double imgscale = 1;
+	Mat image;
+	resize(scene, image, Size(), 1. / imgscale, 1. / imgscale, INTER_CUBIC);
 
-	case 1://openmp
+	cvNamedWindow("Object", 1);
+	cvNamedWindow("Image", 1);
+	cvNamedWindow("Object Correspondence", 1);
+
+	Size patchSize(32, 32); //设置图像小块的大小
+	LDetector ldetector(7, 20, 2, 2000, patchSize.width, 2); //创建特征检测器
+	ldetector.setVerbose(true);
+	PlanarObjectDetector detector;
+
+	vector<Mat> objpyr, imgpyr;
+	int blurKSize = 3;
+	double sigma = 0;
+	GaussianBlur(object, object, Size(blurKSize, blurKSize), sigma, sigma); //对图像做高斯模糊
+	GaussianBlur(image, image, Size(blurKSize, blurKSize), sigma, sigma); //对图像做高斯模糊
+	buildPyramid(object, objpyr, ldetector.nOctaves - 1); //建立图像金字塔
+	buildPyramid(image, imgpyr, ldetector.nOctaves - 1);  //建立图像金字塔
+
+	vector<KeyPoint> objKeypoints, imgKeypoints;
+	PatchGenerator gen(0, 256, 5, true, 0.8, 1.2, -CV_PI / 2, CV_PI / 2, -CV_PI / 2, CV_PI / 2);
+
+	string model_filename = format("%s_model.xml.gz", object_filename);
+	//printf("Trying to load %s ...\n", model_filename.c_str());
+	FileStorage fs(model_filename, FileStorage::READ);
+	if (fs.isOpened())
 	{
-		SURF2();
+		detector.read(fs.getFirstTopLevelNode());
+		//printf("Successfully loaded %s.\n", model_filename.c_str());
 	}
-	break;
-	}
-}
-
-void CExperimentImgDlg::SIFT3() {
-	CComboBox* cmb_thread = ((CComboBox*)GetDlgItem(IDC_COMBO_THREAD));
-	int thread = cmb_thread->GetCurSel();
-	CButton* clb_circulation = ((CButton*)GetDlgItem(IDC_CHECK_CIRCULATION));
-	int circulation = clb_circulation->GetCheck() == 0 ? 1 : 100;
-	startTime = CTime::GetTickCount();
-	switch (thread)
+	else
 	{
-	case 0://win多线程
+		//printf("The file not found and can not be read. Let's train the model.\n");
+		//printf("Step 1. Finding the robust keypoints ...\n");
+		//寻找鲁棒关键点
+		ldetector.setVerbose(true);
+		ldetector.getMostStable2D(object, objKeypoints, 100, gen);
+		//printf("Done.\nStep 2. Training ferns-based planar object detector ...\n");
+		detector.setVerbose(true);
+		//训练检测器
+		detector.train(objpyr, objKeypoints, patchSize.width, 100, 11, 10000, ldetector, gen);
+		//printf("Done.\nStep 3. Saving the model to %s ...\n", model_filename.c_str());
+		//保存模型
+		if (fs.open(model_filename, FileStorage::WRITE))
+			detector.write(fs, "ferns_model");
+	}
+	//printf("Now find the keypoints in the image, try recognize them and compute the homography matrix\n");
+	fs.release();
+
+	vector<Point2f> dst_corners;
+	Mat correspond(object.rows + image.rows, std::max(object.cols, image.cols), CV_8UC3);
+	correspond = Scalar(0.);
+	Mat part(correspond, Rect(0, 0, object.cols, object.rows));
+	cvtColor(object, part, CV_GRAY2BGR);
+	part = Mat(correspond, Rect(0, object.rows, image.cols, image.rows));
+	cvtColor(image, part, CV_GRAY2BGR);
+
+	vector<int> pairs;
+	Mat H;
+
+	double t = (double)getTickCount();
+	objKeypoints = detector.getModelPoints();
+	ldetector(imgpyr, imgKeypoints, 300);
+
+	//std::cout << "Object keypoints: " << objKeypoints.size() << "\n";
+	//std::cout << "Image keypoints: " << imgKeypoints.size() << "\n";
+	bool found = detector(imgpyr, imgKeypoints, H, dst_corners, &pairs);
+	t = (double)getTickCount() - t;
+	//printf("%gms\n", t * 1000 / getTickFrequency());
+
+	if (found)
 	{
-		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
-
-		//for (int i = 0; i < circulation; i++)
-		//{
-		//	for (int i = 0; i < m_nThreadNum; ++i)
-		//	{
-		//		m_pThreadParam[i].startIndex = i * subLength;
-		//		m_pThreadParam[i].endIndex = i != m_nThreadNum - 1 ?
-		//			(i + 1) * subLength - 1 : m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() - 1;
-		//		m_pThreadParam[i].src = m_pImgSrc;
-		//		AfxBeginThread((AFX_THREADPROC)&ImageProcess::addNoise, &m_pThreadParam[i]);
-		//	}
-		//}
-		//CTime endTime = CTime::GetTickCount();
-		//CString timeStr;
-		//timeStr.Format(_T("处理%d次,耗时:%dms"), circulation, endTime - startTime);
-		//AfxMessageBox(timeStr);
+		for (i = 0; i < 4; i++)
+		{
+			Point r1 = dst_corners[i % 4];
+			Point r2 = dst_corners[(i + 1) % 4];
+			line(correspond, Point(r1.x, r1.y + object.rows),
+				Point(r2.x, r2.y + object.rows), Scalar(0, 0, 255));
+		}
 	}
 
-	break;
-
-	case 1://openmp
+	for (i = 0; i < (int)pairs.size(); i += 2)
 	{
-		OnBnClickedButtonSiftFlann();
-	}
-	break;
-	case 2:
-		break;
-	case 3:
-		break;
-	}
-}
-
-void CExperimentImgDlg::SURF3() {
-	CComboBox* cmb_thread = ((CComboBox*)GetDlgItem(IDC_COMBO_THREAD));
-	int thread = cmb_thread->GetCurSel();
-	CButton* clb_circulation = ((CButton*)GetDlgItem(IDC_CHECK_CIRCULATION));
-	int circulation = clb_circulation->GetCheck() == 0 ? 1 : 100;
-	startTime = CTime::GetTickCount();
-	switch (thread)
-	{
-	case 0://win多线程
-	{
-		OnBnClickedButtonBrute();
+		line(correspond, objKeypoints[pairs[i]].pt,
+			imgKeypoints[pairs[i + 1]].pt + Point2f(0, (float)object.rows),
+			Scalar(0, 255, 0));
 	}
 
-	break;
-
-	case 1://openmp
+	imshow("Object Correspondence", correspond); //显示实物单体图像与场景图像的对应关系图
+	Mat objectColor;
+	cvtColor(object, objectColor, CV_GRAY2BGR);
+	for (i = 0; i < (int)objKeypoints.size(); i++)
 	{
-		OnBnClickedButtonFlann();
+		circle(objectColor, objKeypoints[i].pt, 2, Scalar(0, 0, 255), -1);
+		circle(objectColor, objKeypoints[i].pt, (1 << objKeypoints[i].octave) * 15, Scalar(0, 255, 0), 1);
 	}
-	break;
-	case 2:
-		break;
-	case 3:
-		break;
+	Mat imageColor;
+	cvtColor(image, imageColor, CV_GRAY2BGR);
+	for (i = 0; i < (int)imgKeypoints.size(); i++)
+	{
+		circle(imageColor, imgKeypoints[i].pt, 2, Scalar(0, 0, 255), -1);
+		circle(imageColor, imgKeypoints[i].pt, (1 << imgKeypoints[i].octave) * 15, Scalar(0, 255, 0), 1);
 	}
+
+	imwrite("correspond.png", correspond);
+	imshow("Object", objectColor); //显示标记关键点的实物单体图像
+	imshow("Image", imageColor); //显示标记关键点的场景图像
+
+	//waitKey(0);
+
+	return;
 }
 
 void CExperimentImgDlg::ImageStitch() {
