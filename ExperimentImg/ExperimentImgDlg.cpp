@@ -576,6 +576,19 @@ void CExperimentImgDlg::OnNMCustomdrawSliderThreadnum(NMHDR *pNMHDR, LRESULT *pR
 	*pResult = 0;
 }
 
+void CExperimentImgDlg::OnBnClickedButtonStitching() {
+	if (image_path == "" || image_path2 == "")
+		return;
+	cv::String path1, path2;
+
+	USES_CONVERSION;
+	//path1 = W2A(image_path);
+	//path2 = W2A(image_path2);
+	path1 = image_path.GetBuffer(0);
+	path2 = image_path2.GetBuffer(0);
+	Image_stitching::stitching(path1, path2);
+}
+
 void CExperimentImgDlg::OnBnClickedButtonBrute()
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -1199,7 +1212,7 @@ void CExperimentImgDlg::ImageStitch() {
 	case 0://win多线程
 	{
 		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
-		SIFT2();
+		SIFT4();
 		//for (int i = 0; i < circulation; i++)
 		//{
 		//	for (int i = 0; i < m_nThreadNum; ++i)
@@ -1221,7 +1234,7 @@ void CExperimentImgDlg::ImageStitch() {
 
 	case 1://openmp
 	{
-		SURF2();
+		SURF4();
 	}
 	break;
 	}
@@ -1238,7 +1251,7 @@ void CExperimentImgDlg::SIFT4() {
 	case 0://win多线程
 	{
 		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
-
+		OnBnClickedButtonStitching();
 		//for (int i = 0; i < circulation; i++)
 		//{
 		//	for (int i = 0; i < m_nThreadNum; ++i)
@@ -1260,7 +1273,7 @@ void CExperimentImgDlg::SIFT4() {
 
 	case 1://openmp
 	{
-		OnBnClickedButtonSiftFlann();
+		
 	}
 	break;
 	case 2:
@@ -1280,14 +1293,14 @@ void CExperimentImgDlg::SURF4() {
 	{
 	case 0://win多线程
 	{
-		OnBnClickedButtonBrute();
+		
 	}
 
 	break;
 
 	case 1://openmp
 	{
-		OnBnClickedButtonFlann();
+		
 	}
 	break;
 	case 2:

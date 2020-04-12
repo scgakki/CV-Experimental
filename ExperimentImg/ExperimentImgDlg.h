@@ -7,6 +7,7 @@
 #include "ImageProcess.h"
 #include <opencv2/opencv.hpp>
 #include "MatCImage.h"
+#include "Image_stitching.h"
 
 #ifndef CIRCLE_H
 #define CIRCLE_H
@@ -163,6 +164,7 @@ public:
 	void OnBnClickedButtonContours();
 	void OnBnClickedButtonEstimate1();
 	void OnBnClickedButtonEstimate2();
+	void OnBnClickedButtonStitching();
 	afx_msg void OnCbnSelchangeComboSift();
 	afx_msg void OnCbnSelchangeComboThread();
 };

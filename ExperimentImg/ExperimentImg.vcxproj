@@ -202,6 +202,7 @@
     <ClInclude Include="ExperimentImgDlg.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="ImageProcess.h" />
+    <ClInclude Include="Image_stitching.h" />
     <ClInclude Include="ldb.h" />
     <ClInclude Include="MatCImage.h" />
     <ClInclude Include="pch.h" />
@@ -213,6 +214,7 @@
     <ClCompile Include="ExperimentImg.cpp" />
     <ClCompile Include="ExperimentImgDlg.cpp" />
     <ClCompile Include="ImageProcess.cpp" />
+    <ClCompile Include="Image_stitching.cpp" />
     <ClCompile Include="ldb.cpp" />
     <ClCompile Include="MatCImage.cpp" />
     <ClCompile Include="pch.cpp" />
