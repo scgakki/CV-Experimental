@@ -576,7 +576,7 @@ void CExperimentImgDlg::OnNMCustomdrawSliderThreadnum(NMHDR *pNMHDR, LRESULT *pR
 	*pResult = 0;
 }
 
-void CExperimentImgDlg::OnBnClickedButtonStitching() {
+void CExperimentImgDlg::OnBnClickedButtonSIBruteStitching() {
 	if (image_path == "" || image_path2 == "")
 		return;
 	cv::String path1, path2;
@@ -586,7 +586,46 @@ void CExperimentImgDlg::OnBnClickedButtonStitching() {
 	//path2 = W2A(image_path2);
 	path1 = image_path.GetBuffer(0);
 	path2 = image_path2.GetBuffer(0);
-	Image_stitching::stitching(path1, path2);
+	Image_stitching::sift_stitching_BruteForce(path1, path2);
+}
+
+void CExperimentImgDlg::OnBnClickedButtonSIFlannStitching() {
+	if (image_path == "" || image_path2 == "")
+		return;
+	cv::String path1, path2;
+
+	USES_CONVERSION;
+	//path1 = W2A(image_path);
+	//path2 = W2A(image_path2);
+	path1 = image_path.GetBuffer(0);
+	path2 = image_path2.GetBuffer(0);
+	Image_stitching::sift_stitching_Flann(path1, path2);
+}
+
+void CExperimentImgDlg::OnBnClickedButtonSUBruteStitching() {
+	if (image_path == "" || image_path2 == "")
+		return;
+	cv::String path1, path2;
+
+	USES_CONVERSION;
+	//path1 = W2A(image_path);
+	//path2 = W2A(image_path2);
+	path1 = image_path.GetBuffer(0);
+	path2 = image_path2.GetBuffer(0);
+	Image_stitching::surf_stitching_BruteForce(path1, path2);
+}
+
+void CExperimentImgDlg::OnBnClickedButtonSUFlannStitching() {
+	if (image_path == "" || image_path2 == "")
+		return;
+	cv::String path1, path2;
+
+	USES_CONVERSION;
+	//path1 = W2A(image_path);
+	//path2 = W2A(image_path2);
+	path1 = image_path.GetBuffer(0);
+	path2 = image_path2.GetBuffer(0);
+	Image_stitching::surf_stitching_Flann(path1, path2);
 }
 
 void CExperimentImgDlg::OnBnClickedButtonBrute()
@@ -1251,7 +1290,7 @@ void CExperimentImgDlg::SIFT4() {
 	case 0://win多线程
 	{
 		//int subLength = m_pImgSrc->GetWidth() * m_pImgSrc->GetHeight() / m_nThreadNum;
-		OnBnClickedButtonStitching();
+		OnBnClickedButtonSIBruteStitching();
 		//for (int i = 0; i < circulation; i++)
 		//{
 		//	for (int i = 0; i < m_nThreadNum; ++i)
@@ -1273,7 +1312,7 @@ void CExperimentImgDlg::SIFT4() {
 
 	case 1://openmp
 	{
-		
+		OnBnClickedButtonSIFlannStitching();
 	}
 	break;
 	case 2:
@@ -1293,14 +1332,14 @@ void CExperimentImgDlg::SURF4() {
 	{
 	case 0://win多线程
 	{
-		
+		OnBnClickedButtonSUBruteStitching();
 	}
 
 	break;
 
 	case 1://openmp
 	{
-		
+		OnBnClickedButtonSUFlannStitching();
 	}
 	break;
 	case 2:

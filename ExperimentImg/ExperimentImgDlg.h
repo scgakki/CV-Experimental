@@ -164,7 +164,10 @@ public:
 	void OnBnClickedButtonContours();
 	void OnBnClickedButtonEstimate1();
 	void OnBnClickedButtonEstimate2();
-	void OnBnClickedButtonStitching();
+	void OnBnClickedButtonSIBruteStitching();
+	void OnBnClickedButtonSUBruteStitching();
+	void OnBnClickedButtonSIFlannStitching();
+	void OnBnClickedButtonSUFlannStitching();
 	afx_msg void OnCbnSelchangeComboSift();
 	afx_msg void OnCbnSelchangeComboThread();
 };
